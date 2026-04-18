@@ -1,0 +1,16 @@
+[build]
+  command = "npm run build"
+  publish = "dist"
+
+# Proxy API to Render (same pattern as vercel.json). Edit the URL if your backend changes.
+[[redirects]]
+  from = "/api/*"
+  to = "https://ai-data-analyst-backend-sclg.onrender.com/api/:splat"
+  status = 200
+  force = true
+
+# SPA: React client-side routes
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200
