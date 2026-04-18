@@ -1,15 +1,15 @@
 /**
- * API origin for fetch calls.
- * - Local dev: empty → Vite proxies /api to localhost (see vite.config.js).
- * - Production: VITE_API_BASE_URL (e.g. on Vercel), or the deployed Render URL below if unset.
+ * API origin for fetch calls. Prefer relative `/api/...` so:
+ * - Local dev: Vite proxies /api → localhost:5000 (vite.config.js)
+ * - Vercel: vercel.json rewrites /api → Render (no env-injection issues)
+ * Override with VITE_API_BASE_URL (full origin, no trailing slash) if needed.
  */
 function getApiBase() {
   const fromEnv = String(import.meta.env.VITE_API_BASE_URL || "")
     .trim()
     .replace(/\/+$/, "");
   if (fromEnv) return fromEnv;
-  if (import.meta.env.DEV) return "";
-  return "https://ai-data-analyst-backend-sclg.onrender.com";
+  return "";
 }
 
 const API_BASE = getApiBase();

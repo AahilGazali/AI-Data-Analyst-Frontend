@@ -12,4 +12,14 @@ export default defineConfig({
       },
     },
   },
+  preview: {
+    port: 4173,
+    proxy: {
+      "/api": {
+        target: "https://ai-data-analyst-backend-sclg.onrender.com",
+        changeOrigin: true,
+        secure: true,
+      },
+    },
+  },
 });

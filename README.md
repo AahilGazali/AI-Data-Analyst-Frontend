@@ -26,13 +26,12 @@ Output is written to `dist/`.
 
 ## Deploy on Vercel (frontend) + API on Render
 
-1. Deploy the backend on Render and copy its public URL (e.g. `https://your-api.onrender.com`).
-2. In the Vercel project → **Settings → Environment Variables**, add:
-   - **`VITE_API_BASE_URL`** = `https://your-api.onrender.com` (no trailing slash)
-3. On **Render**, add the same variable for cookies to work across origins:
-   - **`SESSION_COOKIE_SAMESITE`** = `none`
-4. Redeploy both services after changing env vars. Vite bakes `VITE_*` in at **build time**, so trigger a new Vercel build after setting the variable.
+`vercel.json` rewrites `/api/*` to your Render service, so the browser only talks to your Vercel domain (same-origin `/api/...`) and you do **not** rely on `VITE_API_BASE_URL` for a working deploy.
 
-Local development: do **not** set `VITE_API_BASE_URL`; requests use the Vite dev server proxy to `localhost:5000`.
+1. Deploy the backend on Render (note its URL — it must match `vercel.json` or edit that file).
+2. On **Render**, set **`SESSION_COOKIE_SAMESITE`** = **`none`** so session cookies work when the UI is on Vercel and the API on Render (responses are still proxied; cookies apply to your Vercel origin).
+3. Push to GitHub; Vercel redeploys. No env var is required for the API URL unless you override.
 
-The built app falls back to the production Render URL in `src/api.js` if `VITE_API_BASE_URL` is missing (so Vercel works even when env is misconfigured). Override with `VITE_API_BASE_URL` if your API URL changes.
+Optional: **`VITE_API_BASE_URL`** if you want the client to call Render directly (e.g. no rewrite); must match your Render URL.
+
+Local development: do **not** set `VITE_API_BASE_URL`; the Vite dev server proxies `/api` to `localhost:5000`. For `npm run preview`, the config proxies `/api` to Render.

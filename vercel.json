@@ -1,0 +1,8 @@
+{
+  "rewrites": [
+    {
+      "source": "/api/:path*",
+      "destination": "https://ai-data-analyst-backend-sclg.onrender.com/api/:path*"
+    }
+  ]
+}
