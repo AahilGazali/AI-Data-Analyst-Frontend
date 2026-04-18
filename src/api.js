@@ -3,6 +3,9 @@
  * - Local dev: Vite proxies /api → localhost:5000 (vite.config.js)
  * - Vercel: vercel.json rewrites /api → Render (no env-injection issues)
  * Override with VITE_API_BASE_URL (full origin, no trailing slash) if needed.
+ *
+ * Session: Vercel→Render proxy often drops Set-Cookie. We store JWT from login
+ * and send Authorization: Bearer on protected routes (backend supports both).
  */
 function getApiBase() {
   const fromEnv = String(import.meta.env.VITE_API_BASE_URL || "")
@@ -14,6 +17,31 @@ function getApiBase() {
 
 const API_BASE = getApiBase();
 
+const SESSION_TOKEN_KEY = "ai_analyst_session_token";
+
+export function getStoredSessionToken() {
+  try {
+    return sessionStorage.getItem(SESSION_TOKEN_KEY);
+  } catch {
+    return null;
+  }
+}
+
+function setStoredSessionToken(token) {
+  try {
+    if (token) sessionStorage.setItem(SESSION_TOKEN_KEY, token);
+    else sessionStorage.removeItem(SESSION_TOKEN_KEY);
+  } catch {
+    /* ignore */
+  }
+}
+
+function bearerHeaders() {
+  const t = getStoredSessionToken();
+  if (!t) return {};
+  return { Authorization: `Bearer ${t}` };
+}
+
 const fetchOpts = { credentials: "include" };
 
 export async function uploadCsv(file) {
@@ -22,6 +50,7 @@ export async function uploadCsv(file) {
   const res = await fetch(`${API_BASE}/api/upload`, {
     method: "POST",
     body: fd,
+    headers: { ...bearerHeaders() },
     ...fetchOpts,
   });
   const data = await res.json().catch(() => ({}));
@@ -32,7 +61,10 @@ export async function uploadCsv(file) {
 export async function sendQuery(uploadId, message, history) {
   const res = await fetch(`${API_BASE}/api/query`, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: {
+      "Content-Type": "application/json",
+      ...bearerHeaders(),
+    },
     body: JSON.stringify({ uploadId, message, history }),
     ...fetchOpts,
   });
@@ -47,7 +79,10 @@ export async function health() {
 }
 
 export async function fetchAuthMe() {
-  const res = await fetch(`${API_BASE}/api/auth/me`, fetchOpts);
+  const res = await fetch(`${API_BASE}/api/auth/me`, {
+    ...fetchOpts,
+    headers: { ...bearerHeaders() },
+  });
   const data = await res.json().catch(() => ({}));
   if (!res.ok) return { user: null };
   return data;
@@ -74,9 +109,20 @@ export async function authLogin(email, password) {
   });
   const data = await res.json().catch(() => ({}));
   if (!res.ok) throw new Error(data.error || "Sign in failed");
+  if (data.token && typeof data.token === "string") {
+    setStoredSessionToken(data.token);
+  }
   return data;
 }
 
 export async function authLogout() {
-  await fetch(`${API_BASE}/api/auth/logout`, { method: "POST", ...fetchOpts });
+  try {
+    await fetch(`${API_BASE}/api/auth/logout`, {
+      method: "POST",
+      headers: { ...bearerHeaders() },
+      ...fetchOpts,
+    });
+  } finally {
+    setStoredSessionToken(null);
+  }
 }
